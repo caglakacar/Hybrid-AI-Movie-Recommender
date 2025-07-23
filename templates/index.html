@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Movie Recommender App</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(to bottom right, #6a1b1b, #f5e7c0);
+      margin: 0;
+      padding: 2rem;
+      text-align: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(-30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      position: relative;
+    }
+
+    .input-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .input-container {
+      position: relative;
+      width: 385px;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.7rem 2.5rem 0.7rem 0.7rem;
+      font-size: 1rem;
+      border: 1px solid #b71c1c;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+    #clearButton {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.7rem;
+      color: #b71c1c;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: none;
+      line-height: 1;
+    }
+
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      border-radius: 0 0 5px 5px;
+      display: none;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #suggestions li {
+      list-style: none;
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    #suggestions li:hover {
+      background-color: #ffe0e0;
+    }
+
+    button[type="submit"],
+    .favorites-btn {
+      padding: 0.7rem 1rem;
+      height: 43px;
+      background: #c62828;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: #fff4e5;
+    }
+
+    h2 {
+      margin-top: 2.5rem;
+      color: #4e0000;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+      justify-items: center;
+      margin-top: 2rem;
+    }
+
+    .card {
+      background: #fff8e1;
+      border-radius: 8px;
+      padding: 1rem;
+      width: 280px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      text-align: left;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .card img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .card h3 {
+      margin-top: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+    }
+
+    .card a {
+      color: #b71c1c;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #b71c1c;
+      margin-top: 2rem;
+    }
+
+    .heart-icon {
+      font-size: 1.5rem;
+      color: #ccc;
+      cursor: pointer;
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      transition: transform 0.2s ease, color 0.3s ease;
+    }
+
+    .heart-icon:hover {
+      transform: scale(1.2);
+    }
+
+    .heart-icon.favorited {
+      color: #e53935;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Movie Recommender</h1>
+    <form method="post" autocomplete="off">
+      <div class="input-wrapper">
+        <div class="input-container">
+          <input type="text" name="movie" id="movieInput" placeholder="Enter a movie name..." value="{{ query }}">
+          <button type="button" id="clearButton" aria-label="Clear input">&times;</button>
+          <ul id="suggestions"></ul>
+        </div>
+        <button type="submit">Find Similar Movies</button>
+        <button type="button" class="favorites-btn" onclick="window.location.href='/favorites'">❤️ Favorites</button>
+      </div>
+    </form>
+
+    {% if recommendations %}
+    <h2>Predicted Results</h2>
+    <div class="grid">
+      {% for movie in recommendations %}
+      <div class="card">
+        <img src="{{ movie.poster }}" alt="{{ movie.title }}"
+             onerror="this.onerror=null; this.src='/static/posters/no-poster.jpg'">
+        <h3>{{ movie.title }}</h3>
+        <p><strong>{{ movie.genre }}</strong>, {{ movie.director }}</p>
+        <p>{{ movie.description }}</p>
+        <p>Similarity: <strong>{{ movie.similarity }}</strong></p>
+        <a href="{{ movie.trailer }}" target="_blank">Watch Trailer</a>
+        <span class="heart-icon {% if movie.is_favorite %}favorited{% endif %}" onclick="toggleFavorite(this, '{{ movie.title }}')">&#10084;</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif query %}
+      <p class="error">❌ No matching movie found. Please try another title.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    const input = document.getElementById("movieInput");
+    const clearButton = document.getElementById("clearButton");
+    const suggestionsList = document.getElementById("suggestions");
+
+    window.addEventListener("DOMContentLoaded", () => {
+      if (input.value.trim()) {
+        clearButton.style.display = "block";
+      }
+    });
+
+    input.addEventListener("input", () => {
+      clearButton.style.display = input.value.length > 0 ? "block" : "none";
+
+      const query = input.value;
+      suggestionsList.innerHTML = "";
+
+      if (query.length > 1) {
+        fetch(`/autocomplete?q=${encodeURIComponent(query)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.length > 0) {
+              suggestionsList.style.display = "block";
+            } else {
+              suggestionsList.style.display = "none";
+            }
+
+            data.forEach(title => {
+              const li = document.createElement("li");
+              li.textContent = title;
+              li.addEventListener("click", () => {
+                input.value = title;
+                clearButton.style.display = "block";
+                suggestionsList.innerHTML = "";
+                suggestionsList.style.display = "none";
+              });
+              suggestionsList.appendChild(li);
+            });
+          });
+      } else {
+        suggestionsList.style.display = "none";
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      input.value = "";
+      input.focus();
+      clearButton.style.display = "none";
+      suggestionsList.style.display = "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestionsList.contains(e.target) && e.target !== input) {
+        suggestionsList.innerHTML = "";
+        suggestionsList.style.display = "none";
+      }
+    });
+
+    function toggleFavorite(el, title) {
+      el.classList.toggle('favorited');
+      const isFavorited = el.classList.contains('favorited');
+
+      fetch(isFavorited ? "/add_favorite" : "/remove_favorite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log(data.message || data.status);
+      })
+      .catch(err => console.error("Error:", err));
+    }
+  </script>
+</body>
+</html>

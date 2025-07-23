@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Favorite Movies</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(to bottom right, #6a1b1b, #f5e7c0);
+      margin: 0;
+      padding: 2rem;
+      text-align: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(-30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .back-btn {
+      padding: 0.6rem 1rem;
+      height: 43px;
+      background: white;
+      color: #c62828;
+      border: 2px solid #c62828;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: 0.3s;
+      margin-bottom: 2rem;
+    }
+
+    .back-btn:hover {
+      background: #c62828;
+      color: white;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      color: #fff4e5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+      justify-items: center;
+    }
+
+    .card {
+      background: #fff8e1;
+      border-radius: 8px;
+      padding: 1rem;
+      width: 280px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      text-align: left;
+      position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .card img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .card h3 {
+      margin-top: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+    }
+
+    .card a {
+      color: #b71c1c;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .heart-icon {
+      font-size: 1.5rem;
+      color: #e53935;
+      cursor: pointer;
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      transition: transform 0.2s ease, color 0.3s ease;
+    }
+
+    .heart-icon:hover {
+      transform: scale(1.2);
+      color: #999;
+    }
+
+    .empty-msg {
+      color: #fff4e5;
+      margin-top: 2rem;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="back-btn" onclick="window.location.href='/'">🏠 Back to Home</button>
+    <h1>❤️ My Favorite Movies</h1>
+
+    {% if favorites %}
+      <div class="grid">
+        {% for movie in favorites %}
+        <div class="card">
+          <img src="{{ movie.poster }}" alt="{{ movie.title }}">
+          <h3>{{ movie.title }}</h3>
+          <p><strong>{{ movie.genre }}</strong>, {{ movie.director }}</p>
+          <p>{{ movie.description }}</p>
+          <a href="{{ movie.trailer }}" target="_blank">Watch Trailer</a>
+          <span class="heart-icon" onclick="removeFromFavorites(this, '{{ movie.title }}')">&#10084;</span>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-msg">You haven't added any movies to your favorites yet.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    function removeFromFavorites(el, title) {
+      fetch("/remove_favorite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ title: title })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+</body>
+</html>
